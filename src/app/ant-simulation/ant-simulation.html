@@ -1,0 +1,224 @@
+<section class="ant-simulation">
+  <header class="ant-simulation__header">
+    <div class="ant-simulation__status">
+      <span class="status-indicator" [class.running]="status() === 'running'" [class.paused]="status() === 'paused'"></span>
+      <span>
+        {{ status() === 'running' ? 'Simulation läuft' : status() === 'paused' ? 'Simulation pausiert' : 'Bereit' }}
+      </span>
+    </div>
+    <div class="ant-simulation__actions">
+      <button
+        type="button"
+        class="btn primary"
+        (click)="status() === 'paused' ? resumeSimulation() : startSimulation()"
+        [disabled]="status() === 'running'"
+      >
+        {{ status() === 'paused' ? 'Fortsetzen' : 'Start' }}
+      </button>
+      <button type="button" class="btn" (click)="pauseSimulation()" [disabled]="status() !== 'running'">Stop</button>
+      <button type="button" class="btn ghost" (click)="resetSimulation()">Reset</button>
+      <button
+        type="button"
+        class="btn ghost"
+        (click)="toggleAutoFood()"
+        [class.active]="autoFoodEnabled()"
+        [attr.aria-pressed]="autoFoodEnabled()"
+      >
+        Auto-Futter {{ autoFoodEnabled() ? 'An' : 'Aus' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="ant-simulation__layout">
+    <aside class="control-panel">
+      <form class="control-panel__form" [formGroup]="controls" (submit)="$event.preventDefault()">
+        <section>
+          <h3>Population</h3>
+          <label class="field">
+            <span>Ameisenanzahl</span>
+            <input type="number" formControlName="antCount" min="10" max="500" />
+          </label>
+          <label class="field">
+            <span>Geschwindigkeit</span>
+            <div class="field__slider">
+              <input type="range" formControlName="antSpeed" min="2" max="18" step="0.5" />
+              <span>{{ (controls.get('antSpeed')?.value ?? 0) | number: '1.0-1' }} WU/s</span>
+            </div>
+          </label>
+        </section>
+
+        <section>
+          <h3>Entscheidung</h3>
+          <label class="field">
+            <span>Pheromon-Einfluss α</span>
+            <div class="field__slider">
+              <input type="range" formControlName="pheromoneInfluence" min="0" max="3" step="0.05" />
+              <span>{{ (controls.get('pheromoneInfluence')?.value ?? 0) | number: '1.2-2' }}</span>
+            </div>
+          </label>
+          <label class="field">
+            <span>Zufallsanteil β</span>
+            <div class="field__slider">
+              <input type="range" formControlName="randomness" min="0" max="3" step="0.05" />
+              <span>{{ (controls.get('randomness')?.value ?? 0) | number: '1.2-2' }}</span>
+            </div>
+          </label>
+        </section>
+
+        <section>
+          <h3>Pheromone</h3>
+          <label class="field">
+            <span>Verdunstung</span>
+            <div class="field__slider">
+              <input type="range" formControlName="evaporationRate" min="0" max="0.2" step="0.005" />
+              <span>{{ (controls.get('evaporationRate')?.value ?? 0) | number: '1.3-3' }} /s</span>
+            </div>
+          </label>
+          <label class="field">
+            <span>Depositing</span>
+            <div class="field__slider">
+              <input type="range" formControlName="depositionRate" min="0" max="1.5" step="0.05" />
+              <span>{{ (controls.get('depositionRate')?.value ?? 0) | number: '1.2-2' }}</span>
+            </div>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" formControlName="allowFoodDepletion" />
+            <span>Futterabbau aktiv</span>
+          </label>
+          <label class="field">
+            <span>Abbau-Faktor</span>
+            <div class="field__slider">
+              <input
+                type="range"
+                formControlName="depletionMultiplier"
+                min="0"
+                max="3"
+                step="0.1"
+                [disabled]="!controls.get('allowFoodDepletion')?.value"
+              />
+              <span>
+                ×{{ (controls.get('depletionMultiplier')?.value ?? 0) | number: '1.1-1' }}
+              </span>
+            </div>
+          </label>
+        </section>
+
+        <section>
+          <h3>Zeitskalierung</h3>
+          <label class="field">
+            <span>Simulationsgeschwindigkeit</span>
+            <div class="field__slider">
+              <input type="range" formControlName="timeScale" min="0.1" max="4" step="0.1" />
+              <span>{{ (controls.get('timeScale')?.value ?? 1) | number: '1.1-1' }}×</span>
+            </div>
+          </label>
+        </section>
+      </form>
+
+      <form class="control-panel__form secondary" [formGroup]="foodControls" (submit)="$event.preventDefault()">
+        <section>
+          <h3>Futterkonfiguration</h3>
+          <p class="hint">
+            Lege Futterpunkte per Klick oder Drag &amp; Drop auf das Canvas. Die Werte gelten für die nächste
+            Platzierung.
+          </p>
+          <label class="field">
+            <span>Kapazität</span>
+            <input type="number" formControlName="capacity" min="10" max="1000" step="10" />
+          </label>
+          <label class="field">
+            <span>Radius</span>
+            <div class="field__slider">
+              <input type="range" formControlName="radius" min="1" max="8" step="0.5" />
+              <span>{{ (foodControls.get('radius')?.value ?? 0) | number: '1.1-1' }} WU</span>
+            </div>
+          </label>
+          <label class="field">
+            <span>Abbau je Sekunde</span>
+            <div class="field__slider">
+              <input type="range" formControlName="depletionRate" min="0.01" max="0.2" step="0.01" />
+              <span>{{ (foodControls.get('depletionRate')?.value ?? 0) | number: '1.2-2' }}</span>
+            </div>
+          </label>
+        </section>
+      </form>
+
+      <div class="tools">
+        <h3>Interaktionen</h3>
+        <div class="tools__buttons">
+          <button
+            type="button"
+            class="btn"
+            (click)="togglePlacement('click')"
+            [class.active]="activePlacement() === 'click'"
+            [attr.aria-pressed]="activePlacement() === 'click'"
+          >
+            Klick-Platzierung
+          </button>
+          <button
+            type="button"
+            class="btn"
+            (click)="togglePlacement('drag')"
+            [class.active]="activePlacement() === 'drag'"
+            [attr.aria-pressed]="activePlacement() === 'drag'"
+          >
+            Drag &amp; Drop
+          </button>
+          <button type="button" class="btn ghost" (click)="togglePheromoneVisibility()">
+            {{ showPheromones() ? 'Pheromone verbergen' : 'Pheromone anzeigen' }}
+          </button>
+        </div>
+        <p class="hint">
+          <strong>Klick:</strong> Wähle das Werkzeug und setze Futterquellen per einfachem Klick.<br />
+          <strong>Drag:</strong> Drücke und halte auf dem Canvas, verschiebe den Marker und lasse los.
+        </p>
+      </div>
+
+      <div class="stats">
+        <h3>Live-Statistiken</h3>
+        <div class="stats__grid">
+          <div class="stats__item">
+            <span>Ameisen aktiv</span>
+            <strong>{{ activeAntCount }}</strong>
+          </div>
+          <div class="stats__item">
+            <span>Futterquellen</span>
+            <strong>{{ activeFoodCount }}</strong>
+          </div>
+          <div class="stats__item">
+            <span>Gelieferte Nahrung</span>
+            <strong>{{ stats().deliveredFood }}</strong>
+          </div>
+          <div class="stats__item">
+            <span>Laufzeit</span>
+            <strong>{{ formatElapsedTime(stats().elapsedSeconds) }}</strong>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="simulation-surface">
+      <div class="simulation-surface__canvas-wrapper">
+        <div class="simulation-surface__toolbar">
+          <div>
+            <span>Weltgröße:</span>
+            <strong>{{ world.width }}×{{ world.height }} WU</strong>
+          </div>
+          <div>
+            <span>Nestposition:</span>
+            <strong>{{ world.width / 2 | number: '1.0-0' }}, {{ world.height / 2 | number: '1.0-0' }}</strong>
+          </div>
+        </div>
+
+        <app-canvas
+          class="simulation-surface__canvas"
+          [world]="world"
+          (ready)="handleCanvasReady($event)"
+          (pointerDown)="handlePointerDown($event)"
+          (pointerMove)="handlePointerMove($event)"
+        ></app-canvas>
+      </div>
+    </div>
+  </div>
+  <app-swarm-insights class="ant-simulation__insights"></app-swarm-insights>
+</section>

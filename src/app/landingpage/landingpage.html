@@ -1,0 +1,77 @@
+<main class="landing" id="top">
+  <section class="simulation-section" id="simulation">
+    <app-ant-simulation></app-ant-simulation>
+    <div class="section-header section-header--after">
+      <h2>Ant Colony Simulation</h2>
+      <p>
+        Passe die Parameter an, platziere Futterquellen und beobachte, wie sich das
+        Verhalten der Kolonie verändert.
+      </p>
+    </div>
+  </section>
+
+  <section class="hero" id="about">
+    <div class="hero__content">
+      <p class="eyebrow">Swarm Robotics Demo</p>
+      <h1>Selbstorganisation auf dem Canvas erleben</h1>
+      <p class="lead">
+        Mehrere virtuelle Ameisen erkunden die Umgebung, finden Futterquellen und
+        verstärken erfolgreiche Wege über Pheromonspuren. Jede Ameise folgt nur ein
+        paar einfachen Regeln – doch gemeinsam entsteht intelligentes Verhalten.
+      </p>
+      <div class="hero__cta">
+        <a class="cta" href="#simulation">Zur Simulation</a>
+        <a class="cta secondary" href="#docs">Konzept &amp; Setup</a>
+      </div>
+    </div>
+    <div class="hero__cards">
+      <article class="card">
+        <h3>World Units</h3>
+        <p>Das Koordinatensystem trennt Welt- und Bildschirmkoordinaten für präzises Scaling.</p>
+      </article>
+      <article class="card">
+        <h3>Pheromon-Netz</h3>
+        <p>Heatmap-ähnliches Grid speichert Intensitäten und verdunstet über die Zeit.</p>
+      </article>
+      <article class="card">
+        <h3>Live-Parameter</h3>
+        <p>Geschwindigkeit, Zufallsanteil, Verdunstung und Antenzahl sind jederzeit änderbar.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="details" id="controls">
+    <h2>Was lässt sich steuern?</h2>
+    <div class="details__grid">
+      <article>
+        <h3>Ameisenpopulation</h3>
+        <p>Anzahl und Geschwindigkeit bestimmen das Grundtempo der Simulation.</p>
+      </article>
+      <article>
+        <h3>Exploration vs. Exploitation</h3>
+        <p>Über α/β regelst du, wie stark Pheromone oder Zufall die Entscheidung leiten.</p>
+      </article>
+      <article>
+        <h3>Pheromon-Verhalten</h3>
+        <p>Evaporation &amp; Depositing steuern das Gedächtnis der Kolonie.</p>
+      </article>
+      <article>
+        <h3>Futterquellen</h3>
+        <p>Setze neue Spots direkt per Klick auf die Karte und aktiviere optional Depletion.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="docs" id="docs">
+    <h2>Konzept &amp; Roadmap</h2>
+    <p>
+      Die wichtigsten Eckpunkte, offene Ideen und Erweiterungen sind in
+      <code>instructions.md</code> dokumentiert. Von dort kannst du die Demo leicht erweitern –
+      etwa um Hindernisse, Heatmaps oder Statistiken.
+    </p>
+    <p class="docs__hint">
+      Tipp: Die Codebasis ist in Interfaces, Canvas-Abstraktion und Simulation getrennt, sodass
+      weitere Swarm-Experimente schnell umgesetzt werden können.
+    </p>
+  </section>
+</main>

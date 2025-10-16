@@ -1,0 +1,56 @@
+<section class="swarm-insights" aria-labelledby="swarm-insights-title">
+  <header class="swarm-insights__header">
+    <h2 id="swarm-insights-title">Wie funktioniert das Verhalten?</h2>
+    <p>
+      Die Ameisen folgen hier einer vereinfachten Variante von Swarm-Robotics-Prinzipien: Jede Einheit handelt für sich,
+      reagiert nur auf lokale Reize und erzeugt dadurch gemeinsam sinnvolles Verhalten.
+    </p>
+  </header>
+
+  <div class="swarm-insights__grid">
+    <article class="insight-card">
+      <div class="insight-card__canvas" aria-hidden="true">
+        <app-canvas
+          [world]="insightWorld"
+          [background]="transparentBackground"
+          (ready)="handleCanvasReady('explore', $event)"
+        ></app-canvas>
+      </div>
+      <h3>Lokale Entscheidungen</h3>
+      <p>
+        Jede Ameise kennt nur ihre aktuelle Richtung sowie die Sensoren an der eigenen Position. Sie entscheidet
+        probabilistisch, ob sie weiter erkundet oder bestehenden Spuren folgt – es gibt keinen globalen Pfadplan.
+      </p>
+    </article>
+
+    <article class="insight-card">
+      <div class="insight-card__canvas" aria-hidden="true">
+        <app-canvas
+          [world]="insightWorld"
+          [background]="transparentBackground"
+          (ready)="handleCanvasReady('pheromones', $event)"
+        ></app-canvas>
+      </div>
+      <h3>Pheromonverstärkung</h3>
+      <p>
+        Sobald Nahrung gefunden wurde, wird eine Heimspur (blau) verstärkt. Andere Ameisen riechen den Gradient und
+        folgen ihm – je öfter der Weg genutzt wird, desto deutlicher wird er.
+      </p>
+    </article>
+
+    <article class="insight-card">
+      <div class="insight-card__canvas" aria-hidden="true">
+        <app-canvas
+          [world]="insightWorld"
+          [background]="transparentBackground"
+          (ready)="handleCanvasReady('home', $event)"
+        ></app-canvas>
+      </div>
+      <h3>Rückwegsuche</h3>
+      <p>
+        Findet eine Ameise keine Spur mehr, orientiert sie sich wieder Richtung Nest. Dort wird der Bereich dauerhaft
+        erneuert, sodass Rückkehrer die Heimspur nicht verlieren und neue Sucher am Nest starten können.
+      </p>
+    </article>
+  </div>
+</section>
