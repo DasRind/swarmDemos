@@ -1,59 +1,64 @@
-# SwarmDemos
+# Swarm Demos
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.3.
+Canvas-basierte Visualisierungen rund um Schwarmintelligenz. Mehrere Ameisen simulieren kollektives Verhalten, bilden Pheromon-Pfade und reagieren auf dynamische Futterquellen – ideal als Demo für Robotik- oder KI-Workshops.
 
-## Development server
+> Dieses Repository ist in [KuhLabs](../KuhLabs) als Tool mit dem Slug `swarm-demos` eingebunden.
 
-To start a local development server, run:
+## Highlights
+
+- Angular 20 + TypeScript, gerendert über ein HTML-Canvas.
+- Steuerpanel für Ameisenanzahl, Simulationstempo, Futterabbau u. v. m.
+- Live-Manipulation der Umgebung (Futterquellen hinzufügen/entfernen).
+- Modularer Simulationskern, gut erweiterbar um neue Verhaltensregeln.
+
+## Lokale Entwicklung
 
 ```bash
+npm install
 ng serve
+# http://localhost:4200/
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Die App lädt automatisch neu, sobald sich Quellcode oder Styles ändern.
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Production Build
 
 ```bash
-ng generate component component-name
+npm run build
+# -> dist/swarmDemos/browser
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Der Build produziert eine vollständig statische Ausgabe, die von KuhLabs in `public/embeds/swarm-demos` gespiegelt wird.
+
+## Einbindung in KuhLabs
+
+1. (Einmalig) Als Submodule hinzufügen:
+   ```bash
+   git submodule add ../swarmDemos external/tools/swarm-demos
+   ```
+2. Build & Sync innerhalb von KuhLabs ausführen:
+   ```bash
+   npm run tools:prepare
+   ```
+3. Tool steht anschließend unter `http://localhost:4200/tools/swarm-demos` bereit.
+
+## Updates aus KuhLabs heraus
 
 ```bash
-ng generate --help
+cd external/tools/swarm-demos
+git pull
+cd ../../..
+npm run tools:refresh
 ```
 
-## Building
+Damit werden neue Commits des Submodules eingebunden, gebaut und in das Embed-Verzeichnis kopiert.
 
-To build the project run:
+## Tests
 
-```bash
-ng build
-```
+- `ng test` – Unit-Tests via Karma.
+- `ng e2e` – End-to-End-Tests (nach Wahl eines E2E-Frameworks).
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## Weitere Ressourcen
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+- [Angular CLI Doku](https://angular.dev/tools/cli)
+- [KuhLabs README](../KuhLabs/README.md) – Details zu Build-/Sync-Skripten für externe Tools.

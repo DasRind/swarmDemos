@@ -7,6 +7,16 @@ Mehrere virtuelle Ameisen suchen nach Futter, kommunizieren indirekt über **Phe
 
 ---
 
+## 🛠️ Integration in KuhLabs
+
+- **Slug:** `swarm-demos`
+- **Submodule-Pfad:** `external/tools/swarm-demos`
+- **Build & Sync:** In KuhLabs `npm run tools:prepare` ausführen (baut `dist/swarmDemos/browser` und kopiert nach `public/embeds/swarm-demos`).
+- **Route:** `http://localhost:4200/tools/swarm-demos`
+- **Eigenständige Entwicklung:** `cd external/tools/swarm-demos && ng serve`
+
+---
+
 ## 💡 Konzeptüberblick
 
 - **Technologie:** Angular + TypeScript + HTML Canvas
