@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  ElementRef,
   HostListener,
   OnDestroy,
   inject,
@@ -58,6 +59,7 @@ const FOOD_RESPAWN_MAX_DELAY = 32; // seconds
 })
 export class AntSimulation implements OnDestroy {
   private readonly fb = inject(FormBuilder);
+  private readonly host = inject(ElementRef<HTMLElement>);
   readonly world = WORLD_DIMENSIONS;
 
   readonly controls = this.fb.group({
@@ -86,12 +88,14 @@ export class AntSimulation implements OnDestroy {
   readonly activePlacement = signal<FoodPlacementMode>('click');
   readonly showPheromones = signal(true);
   readonly autoFoodEnabled = signal(true);
+  readonly presentationMode = signal(false);
 
   private controller: CanvasController | null = null;
   private simulation: SimulationState | null = null;
   private initialFoodSources: FoodSource[] = [];
   private activeSettings: SimulationSettings = this.createSettingsSnapshot();
   private subscriptions = new Subscription();
+  private presentationSnapshot: { antCount: number | null; placement: FoodPlacementMode } | null = null;
 
   private animationHandle: number | null = null;
   private lastTimestamp: number | null = null;
@@ -184,6 +188,107 @@ export class AntSimulation implements OnDestroy {
     this.autoFoodEnabled.set(enabled);
     if (enabled && this.simulation) {
       this.simulation.foodRespawnTimer = this.nextFoodRespawnDelay();
+    }
+  }
+
+  togglePresentationMode() {
+    if (this.presentationMode()) {
+      this.deactivatePresentationMode();
+    } else {
+      this.activatePresentationMode();
+    }
+  }
+
+  private activatePresentationMode() {
+    const antControl = this.controls.get('antCount');
+    const currentAnts = antControl?.value ?? null;
+    this.presentationSnapshot = {
+      antCount: currentAnts,
+      placement: this.activePlacement(),
+    };
+    if (currentAnts !== null && currentAnts > 80 && antControl) {
+      antControl.setValue(80);
+    }
+    this.activePlacement.set('none');
+    this.presentationMode.set(true);
+    this.requestFullscreen();
+    this.cdr.markForCheck();
+    this.render();
+  }
+
+  private deactivatePresentationMode(options?: { skipFullscreenExit?: boolean }) {
+    const antControl = this.controls.get('antCount');
+    const snapshot = this.presentationSnapshot;
+    if (snapshot && snapshot.antCount !== null && antControl) {
+      const previous = snapshot.antCount;
+      if (antControl.value !== previous) {
+        antControl.setValue(previous);
+      }
+    }
+    if (snapshot && snapshot.placement) {
+      this.activePlacement.set(snapshot.placement);
+    } else {
+      this.activePlacement.set('click');
+    }
+    this.presentationSnapshot = null;
+    this.presentationMode.set(false);
+    if (!options?.skipFullscreenExit) {
+      this.exitFullscreen();
+    }
+    this.cdr.markForCheck();
+    this.render();
+  }
+
+  private requestFullscreen() {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    if (document.fullscreenElement) {
+      return;
+    }
+    const element = this.host.nativeElement;
+    const request =
+      element.requestFullscreen ||
+      (element as any).webkitRequestFullscreen ||
+      (element as any).mozRequestFullScreen ||
+      (element as any).msRequestFullscreen;
+    if (typeof request === 'function') {
+      try {
+        const result = request.call(element);
+        if (result instanceof Promise) {
+          result.catch(() => {
+            /* Fullscreen request failed; ignore for graceful fallback. */
+          });
+        }
+      } catch {
+        // Ignore fullscreen errors to avoid disrupting the demo.
+      }
+    }
+  }
+
+  private exitFullscreen() {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    if (!document.fullscreenElement) {
+      return;
+    }
+    const exit =
+      document.exitFullscreen ||
+      (document as any).webkitExitFullscreen ||
+      (document as any).mozCancelFullScreen ||
+      (document as any).msExitFullscreen;
+    if (typeof exit === 'function') {
+      try {
+        const result = exit.call(document);
+        if (result instanceof Promise) {
+          result.catch(() => {
+            /* Ignore errors when leaving fullscreen. */
+          });
+        }
+      } catch {
+        // Ignore exit errors.
+      }
     }
   }
 
@@ -788,33 +893,43 @@ export class AntSimulation implements OnDestroy {
       return;
     }
 
-    const highDetail = ants.length <= 120;
-    const abdomenRadius = highDetail ? 0.42 : 0.36;
-    const thoraxRadius = highDetail ? 0.34 : 0.3;
-    const headRadius = highDetail ? 0.28 : 0.26;
-    const legReach = 0.7;
+    const antCount = Math.max(ants.length, 1);
+    const densityRatio = Math.min(1, antCount / 150);
+    const baseScale = 1 + (1 - densityRatio) * 0.9;
+    const presentationBoost = this.presentationMode() ? 1.2 : 1;
+    const sizeMultiplier = Math.min(2.4, baseScale * presentationBoost);
+    const highDetail = antCount <= 140;
+    const abdomenRadius = (highDetail ? 0.42 : 0.36) * sizeMultiplier;
+    const thoraxRadius = (highDetail ? 0.34 : 0.3) * sizeMultiplier;
+    const headRadius = (highDetail ? 0.28 : 0.26) * sizeMultiplier;
+    const legReach = 0.7 * sizeMultiplier;
+    const legThickness = (highDetail ? 0.18 : 0.14) * Math.max(1, sizeMultiplier * 0.75);
+    const bodyStrokeWidth = 0.22 * Math.max(1, sizeMultiplier * 0.78);
     const legOffsets = [-0.35, 0, 0.35];
+    const bodySpacing = 0.2 * sizeMultiplier;
+    const abdomenOffset = 0.6 * sizeMultiplier;
+    const headOffset = 0.8 * sizeMultiplier;
+    const legAttachmentScale = Math.max(1, sizeMultiplier * 0.85);
 
     this.controller.withWorldSpace((ctx) => {
       ctx.save();
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.lineWidth = highDetail ? 0.22 : 0.16;
       for (const ant of ants) {
         const forward = { x: Math.cos(ant.direction), y: Math.sin(ant.direction) };
         const perp = { x: -forward.y, y: forward.x };
 
         const thoraxCenter = {
-          x: ant.position.x + forward.x * 0.2,
-          y: ant.position.y + forward.y * 0.2,
+          x: ant.position.x + forward.x * bodySpacing,
+          y: ant.position.y + forward.y * bodySpacing,
         };
         const abdomenCenter = {
-          x: thoraxCenter.x - forward.x * 0.6,
-          y: thoraxCenter.y - forward.y * 0.6,
+          x: thoraxCenter.x - forward.x * abdomenOffset,
+          y: thoraxCenter.y - forward.y * abdomenOffset,
         };
         const headCenter = {
-          x: thoraxCenter.x + forward.x * 0.8,
-          y: thoraxCenter.y + forward.y * 0.8,
+          x: thoraxCenter.x + forward.x * headOffset,
+          y: thoraxCenter.y + forward.y * headOffset,
         };
 
         const bodyColor = ant.carryingFood ? '#f97316' : '#f1f5f9';
@@ -822,11 +937,11 @@ export class AntSimulation implements OnDestroy {
 
         if (highDetail) {
           ctx.strokeStyle = 'rgba(148, 163, 184, 0.85)';
-          ctx.lineWidth = 0.18;
+          ctx.lineWidth = legThickness;
           for (const offset of legOffsets) {
             const attachment = {
-              x: thoraxCenter.x + forward.x * offset,
-              y: thoraxCenter.y + forward.y * offset,
+              x: thoraxCenter.x + forward.x * offset * legAttachmentScale,
+              y: thoraxCenter.y + forward.y * offset * legAttachmentScale,
             };
             const leftFoot = {
               x: attachment.x + perp.x * legReach,
@@ -849,12 +964,13 @@ export class AntSimulation implements OnDestroy {
           }
         } else {
           ctx.strokeStyle = 'rgba(148, 163, 184, 0.7)';
+          ctx.lineWidth = legThickness;
         }
 
         // Abdomen
         ctx.fillStyle = bodyColor;
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 0.22;
+        ctx.lineWidth = bodyStrokeWidth;
         ctx.beginPath();
         ctx.ellipse(
           abdomenCenter.x,
@@ -884,6 +1000,7 @@ export class AntSimulation implements OnDestroy {
 
         // Head
         ctx.beginPath();
+        ctx.lineWidth = bodyStrokeWidth * 0.95;
         ctx.ellipse(
           headCenter.x,
           headCenter.y,
@@ -904,7 +1021,7 @@ export class AntSimulation implements OnDestroy {
           };
           const antennaLength = headRadius * 1.8;
           ctx.strokeStyle = 'rgba(148, 163, 184, 0.9)';
-          ctx.lineWidth = 0.14;
+          ctx.lineWidth = Math.max(0.12, bodyStrokeWidth * 0.45);
           ctx.beginPath();
           ctx.moveTo(antennaBase.x, antennaBase.y);
           ctx.lineTo(
@@ -1071,6 +1188,23 @@ export class AntSimulation implements OnDestroy {
     this.dragPreview = null;
     this.dragPointerId = null;
     this.render();
+  }
+
+  @HostListener('document:fullscreenchange')
+  handleFullscreenChange() {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    if (!document.fullscreenElement && this.presentationMode()) {
+      this.deactivatePresentationMode({ skipFullscreenExit: true });
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  handleEscapeKey() {
+    if (this.presentationMode()) {
+      this.deactivatePresentationMode();
+    }
   }
 
   private clampToWorld(position: Vector2): Vector2 {

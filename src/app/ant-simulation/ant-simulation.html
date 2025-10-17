@@ -1,4 +1,4 @@
-<section class="ant-simulation">
+<section class="ant-simulation" [class.presentation-mode]="presentationMode()">
   <header class="ant-simulation__header">
     <div class="ant-simulation__status">
       <span class="status-indicator" [class.running]="status() === 'running'" [class.paused]="status() === 'paused'"></span>
@@ -25,6 +25,15 @@
         [attr.aria-pressed]="autoFoodEnabled()"
       >
         Auto-Futter {{ autoFoodEnabled() ? 'An' : 'Aus' }}
+      </button>
+      <button
+        type="button"
+        class="btn accent"
+        (click)="togglePresentationMode()"
+        [attr.aria-pressed]="presentationMode()"
+        [class.active]="presentationMode()"
+      >
+        {{ presentationMode() ? 'Präsentationsmodus verlassen' : 'Präsentationsmodus' }}
       </button>
     </div>
   </header>
@@ -213,10 +222,22 @@
         <app-canvas
           class="simulation-surface__canvas"
           [world]="world"
+          [background]="presentationMode() ? '#000' : '#0f172a'"
           (ready)="handleCanvasReady($event)"
           (pointerDown)="handlePointerDown($event)"
           (pointerMove)="handlePointerMove($event)"
         ></app-canvas>
+
+        <div class="presentation-overlay" *ngIf="presentationMode()">
+          <div class="presentation-overlay__bar">
+            <button type="button" class="btn primary" (click)="togglePresentationMode()">Modus beenden (Esc)</button>
+            <div class="presentation-overlay__stats">
+              <span>Ameisen: {{ activeAntCount }}</span>
+              <span>Futter: {{ activeFoodCount }}</span>
+              <span>Laufzeit: {{ formatElapsedTime(stats().elapsedSeconds) }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
