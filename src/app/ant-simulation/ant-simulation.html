@@ -183,6 +183,23 @@
         </p>
       </div>
 
+      <div class="visualization">
+        <h3>Anzeige</h3>
+        <div class="palette-selector">
+          <button
+            type="button"
+            class="btn palette-selector__btn"
+            *ngFor="let palette of pheromonePalettes"
+            (click)="selectPheromonePalette(palette.id)"
+            [class.active]="pheromonePalette() === palette.id"
+            [attr.aria-pressed]="pheromonePalette() === palette.id"
+          >
+            <span class="palette-selector__label">{{ palette.label }}</span>
+            <span class="palette-selector__description">{{ palette.description }}</span>
+          </button>
+        </div>
+      </div>
+
       <div class="stats">
         <h3>Live-Statistiken</h3>
         <div class="stats__grid">
@@ -235,6 +252,7 @@
               <span>Ameisen: {{ activeAntCount }}</span>
               <span>Futter: {{ activeFoodCount }}</span>
               <span>Laufzeit: {{ formatElapsedTime(stats().elapsedSeconds) }}</span>
+              <span>Palette: {{ currentPheromonePaletteLabel }}</span>
             </div>
           </div>
         </div>

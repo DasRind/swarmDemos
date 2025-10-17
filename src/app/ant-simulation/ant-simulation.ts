@@ -26,10 +26,27 @@ import { Vector2, WorldDimensions } from '../interfaces/primitives';
 
 type SimulationLifecycle = 'idle' | 'running' | 'paused';
 type FoodPlacementMode = 'none' | 'click' | 'drag';
+type PheromonePaletteId = 'contrast' | 'protanopia' | 'deuteranopia' | 'tritanopia';
 
 interface AntSpawnConfig {
   angleSpread: number;
   directionJitter: number;
+}
+
+interface PheromoneLayerStyle {
+  color: string;
+  minAlpha: number;
+  maxAlpha: number;
+  power?: number;
+}
+
+interface PheromonePalette {
+  id: PheromonePaletteId;
+  label: string;
+  description: string;
+  home: PheromoneLayerStyle;
+  food: PheromoneLayerStyle;
+  nest: PheromoneLayerStyle;
 }
 
 const WORLD_DIMENSIONS: WorldDimensions = { width: 120, height: 80 };
@@ -48,6 +65,41 @@ const NEST_SIGNAL_DECAY_RATE = 0.28;
 const MAX_FOOD_SOURCES = 5;
 const FOOD_RESPAWN_MIN_DELAY = 18; // seconds
 const FOOD_RESPAWN_MAX_DELAY = 32; // seconds
+
+const PHEROMONE_PALETTES: readonly PheromonePalette[] = [
+  {
+    id: 'contrast',
+    label: 'Kontraststark',
+    description: 'Cyan, Magenta, Gold – hohe Leuchtkraft für dunkle Oberflächen.',
+    home: { color: '#38bdf8', minAlpha: 0.15, maxAlpha: 0.9, power: 0.65 },
+    food: { color: '#f472b6', minAlpha: 0.14, maxAlpha: 0.88, power: 0.68 },
+    nest: { color: '#facc15', minAlpha: 0.18, maxAlpha: 0.95, power: 0.55 },
+  },
+  {
+    id: 'protanopia',
+    label: 'Protanopie',
+    description: 'Blau, Orange, Creme – gut unterscheidbar bei Rot-Schwäche.',
+    home: { color: '#3a86ff', minAlpha: 0.16, maxAlpha: 0.9, power: 0.62 },
+    food: { color: '#ff9f1c', minAlpha: 0.18, maxAlpha: 0.92, power: 0.6 },
+    nest: { color: '#ffe66d', minAlpha: 0.2, maxAlpha: 0.95, power: 0.5 },
+  },
+  {
+    id: 'deuteranopia',
+    label: 'Deuteranopie',
+    description: 'Petrol, Pink, Gelb – Alternativen bei Grün-Schwäche.',
+    home: { color: '#118ab2', minAlpha: 0.15, maxAlpha: 0.88, power: 0.66 },
+    food: { color: '#ef476f', minAlpha: 0.2, maxAlpha: 0.95, power: 0.58 },
+    nest: { color: '#ffd166', minAlpha: 0.2, maxAlpha: 0.96, power: 0.52 },
+  },
+  {
+    id: 'tritanopia',
+    label: 'Tritanopie',
+    description: 'Rot, Grün, Orange – ohne Blau/Gelb-Konflikte.',
+    home: { color: '#e63946', minAlpha: 0.18, maxAlpha: 0.94, power: 0.6 },
+    food: { color: '#2a9d8f', minAlpha: 0.16, maxAlpha: 0.88, power: 0.64 },
+    nest: { color: '#f4a261', minAlpha: 0.2, maxAlpha: 0.95, power: 0.55 },
+  },
+] as const;
 
 @Component({
   selector: 'app-ant-simulation',
@@ -89,6 +141,8 @@ export class AntSimulation implements OnDestroy {
   readonly showPheromones = signal(true);
   readonly autoFoodEnabled = signal(true);
   readonly presentationMode = signal(false);
+  readonly pheromonePalette = signal<PheromonePaletteId>('contrast');
+  readonly pheromonePalettes = PHEROMONE_PALETTES;
 
   private controller: CanvasController | null = null;
   private simulation: SimulationState | null = null;
@@ -180,6 +234,15 @@ export class AntSimulation implements OnDestroy {
 
   togglePheromoneVisibility() {
     this.showPheromones.set(!this.showPheromones());
+    this.render();
+  }
+
+  selectPheromonePalette(id: PheromonePaletteId) {
+    if (this.pheromonePalette() === id) {
+      return;
+    }
+    this.pheromonePalette.set(id);
+    this.cdr.markForCheck();
     this.render();
   }
 
@@ -812,23 +875,28 @@ export class AntSimulation implements OnDestroy {
       return;
     }
 
+    const palette = this.getCurrentPalette();
+
     const ctx = this.controller;
-    ctx.clear('#020817');
+    ctx.clear('#05070b');
 
     ctx.withWorldSpace((canvasCtx) => {
-      canvasCtx.fillStyle = '#0f172a';
+      canvasCtx.fillStyle = '#131b28';
       const { width, height } = this.world;
       canvasCtx.fillRect(0, 0, width, height);
     });
 
     if (this.simulation) {
       if (this.showPheromones()) {
-        this.drawPheromones(this.simulation.homePheromones, 'rgba(96, 165, 250, 0.55)');
-        this.drawPheromones(this.simulation.foodPheromones, 'rgba(16, 185, 129, 0.55)');
-        this.drawPheromones(this.simulation.nestSignals, 'rgba(253, 224, 71, 0.5)');
+        this.drawPheromones(this.simulation.homePheromones, palette.home);
+        this.drawPheromones(this.simulation.foodPheromones, palette.food);
+        this.drawPheromones(this.simulation.nestSignals, palette.nest);
       } else {
         // Still render a subtle hint of the nest signals when pheromones are hidden.
-        this.drawPheromones(this.simulation.nestSignals, 'rgba(253, 224, 71, 0.25)');
+        this.drawPheromones(this.simulation.nestSignals, {
+          ...palette.nest,
+          maxAlpha: Math.min(palette.nest.maxAlpha, 0.35),
+        });
       }
     }
 
@@ -844,6 +912,16 @@ export class AntSimulation implements OnDestroy {
     if (this.dragPreview) {
       this.drawFoodSources([this.dragPreview], true);
     }
+  }
+
+  private getCurrentPalette(): PheromonePalette {
+    const id = this.pheromonePalette();
+    const found = this.pheromonePalettes.find((palette) => palette.id === id);
+    return found ?? this.pheromonePalettes[0]!;
+  }
+
+  get currentPheromonePaletteLabel(): string {
+    return this.getCurrentPalette().label;
   }
 
   private drawNest() {
@@ -1043,19 +1121,24 @@ export class AntSimulation implements OnDestroy {
     });
   }
 
-  private drawPheromones(grid: PheromoneGrid, color: string) {
+  private drawPheromones(grid: PheromoneGrid, style: PheromoneLayerStyle) {
     if (!this.controller) {
       return;
     }
 
     const { cellSize, columns, values } = grid;
     this.controller.withWorldSpace((ctx) => {
+      const minAlpha = Math.max(0, Math.min(1, style.minAlpha));
+      const maxAlpha = Math.max(minAlpha, Math.min(1, style.maxAlpha));
+      const power = style.power ?? 0.7;
+      ctx.fillStyle = style.color;
       for (let row = 0; row < grid.rows; row++) {
         for (let col = 0; col < columns; col++) {
           const value = values[row * columns + col];
-          if (value <= 0.01) continue;
-          ctx.fillStyle = color;
-          ctx.globalAlpha = Math.min(0.7, value);
+          if (value <= 0.005) continue;
+          const normalized = Math.min(1, Math.max(0, Math.pow(value, power)));
+          const alpha = minAlpha + (maxAlpha - minAlpha) * normalized;
+          ctx.globalAlpha = Math.min(1, alpha);
           ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
         }
       }

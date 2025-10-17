@@ -29,7 +29,7 @@ import { Vector2, WorldDimensions } from '../interfaces/primitives';
 export class Canvas implements AfterViewInit, OnDestroy, OnChanges {
   @Input({ required: true }) world!: WorldDimensions;
   @Input() devicePixelRatio = typeof window !== 'undefined' ? window.devicePixelRatio : 1;
-  @Input() background = '#0f172a';
+  @Input() background = '#0c121b';
 
   @Output() ready = new EventEmitter<CanvasController>();
   @Output() pointerDown = new EventEmitter<CanvasPointerEvent>();
